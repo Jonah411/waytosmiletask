@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -11,7 +11,9 @@ import {
 const UpdateEmployee = () => {
   const { id } = useParams();
   const employeeList = useSelector(getEmployeeDetailsList);
-  const userList = useSelector(getUserList);
+  const [employeeDetailsList] = useState(employeeList);
+  const userListArray = useSelector(getUserList);
+  const [userList] = useState(userListArray);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [formValue, setFormValue] = useState({
@@ -24,7 +26,9 @@ const UpdateEmployee = () => {
   const [isSubmit, setIssubmit] = useState(false);
   const [formError, setFormError] = useState({});
   useEffect(() => {
-    const selectUser = employeeList?.find((user) => user?.id === parseInt(id));
+    const selectUser = employeeDetailsList?.find(
+      (user) => user?.id === parseInt(id)
+    );
     const employeeProfile = {
       email: selectUser ? selectUser?.email : "",
       password: selectUser ? selectUser?.password : "",
@@ -33,7 +37,7 @@ const UpdateEmployee = () => {
       profilename: selectUser ? selectUser?.profilename : "",
     };
     setFormValue(employeeProfile);
-  }, [id, employeeList]);
+  }, [id, employeeDetailsList]);
   const handleChange = (e) => {
     const { name, type, value, files } = e.target;
     if (type === "file") {
@@ -151,46 +155,53 @@ const UpdateEmployee = () => {
       isMounted = false;
     };
   }, [formValue?.filename, formValue?.profilename]);
+
+  const userValue = useCallback(() => {
+    const userDatalist = userList.map((user) =>
+      user.id === parseInt(id)
+        ? {
+            ...user,
+            email: formValue?.email,
+            password: formValue.password,
+          }
+        : user
+    );
+    return userDatalist;
+  }, [formValue, id, userList]);
+  const empValue = useCallback(() => {
+    const empList = employeeDetailsList.map((employee) =>
+      employee.id === parseInt(id)
+        ? {
+            ...employee,
+            name: formValue.name,
+            email: formValue?.email,
+            password: formValue.password,
+            profilename: dataURIList?.profilename,
+            filename: dataURIList?.filename,
+          }
+        : employee
+    );
+    return empList;
+  }, [formValue, id, dataURIList, employeeDetailsList]);
   useEffect(() => {
     if (Object.keys(formError).length === 0 && isSubmit) {
-      console.log(formValue);
-      const list = employeeList?.map((employee) =>
-        employee.id === parseInt(id)
-          ? {
-              ...employee,
-              name: formValue.name,
-              email: formValue?.email,
-              password: formValue.password,
-              profilename: dataURIList?.profilename,
-              filename: dataURIList?.filename,
-            }
-          : employee
-      );
-      console.log(list);
-      dispatch(employeeListDetails(list));
-      const userDatalist = userList?.map((user) =>
-        user.id === parseInt(id)
-          ? {
-              ...user,
-              email: formValue?.email,
-              password: formValue.password,
-            }
-          : user
-      );
-      dispatch(userDetails(userDatalist));
+      const dataEmployeeValue = empValue();
+      dispatch(employeeListDetails(dataEmployeeValue));
+
+      const dataUserValue = userValue();
+      dispatch(userDetails(dataUserValue));
+
       navigate("/employee");
     }
   }, [
     formError,
     isSubmit,
     formValue,
-    dataURIList?.filename,
-    dataURIList?.profilename,
-    dispatch,
-    employeeList,
     id,
+    dispatch,
     navigate,
-    userList,
+    userValue,
+    empValue,
   ]);
   return (
     <div className="container m-5">
